@@ -54,7 +54,7 @@ class CephPoolPlugin(base.Base):
             osd_pool_cmdline='ceph osd pool stats -f json --cluster ' + self.cluster
             stats_output = subprocess.check_output(osd_pool_cmdline, shell=True)
             cephdf_cmdline='ceph df -f json --cluster ' + self.cluster 
-            df_output = subprocess.check_output(ceph_dfcmdline, shell=True)
+            df_output = subprocess.check_output(cephdf_cmdline, shell=True)
         except Exception as exc:
             collectd.error("ceph-pool: failed to ceph pool stats :: %s :: %s"
                     % (exc, traceback.format_exc()))
