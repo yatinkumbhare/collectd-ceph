@@ -45,7 +45,7 @@ class CephOsdPlugin(base.Base):
     def get_stats(self):
         """Retrieves stats from ceph osds"""
 
-        ceph_cluster = "%s-%s" % (self.prefix, self.cluster)
+        ceph_cluster = "%s.%s" % (self.prefix, self.cluster)
 
         data = { ceph_cluster: { 
             'pool': { 'number': 0 },
@@ -55,22 +55,30 @@ class CephOsdPlugin(base.Base):
         try:
             cephosdcmdline='ceph osd dump --format json --cluster ' + self.cluster
             output = subprocess.check_output(cephosdcmdline, shell=True)
+            # Get ceph osd apply and commit latency
+            cephosdpef_cmdline='ceph osd perf -f json --cluster ceph'
+            cephosdpef_output = subprocess.check_output(cephosdpef_cmdline, shell=True)
         except Exception as exc:
-            collectd.error("ceph-osd: failed to ceph osd dump :: %s :: %s"
+            collectd.error("ceph-osd: failed to ceph osd :: %s :: %s"
                     % (exc, traceback.format_exc()))
             return
 
         if output is None:
             collectd.error('ceph-osd: failed to ceph osd dump :: output was None')
 
+        if cephosdpef_output is None:
+            collectd.error('ceph-osd: failed to ceph osd perf :: output was None')
+
         json_data = json.loads(output)
+        json_cephosdpef_data = json.loads(cephosdpef_output)
 
         # number of pools
         data[ceph_cluster]['pool']['number'] = len(json_data['pools'])
 
         # pool metadata
         for pool in json_data['pools']:
-            pool_name = "pool-%s" % pool['pool_name']
+            pool_name = pool['pool_name'].replace('.','-')
+            pool_name = "pool.%s" % pool_name
             data[ceph_cluster][pool_name] = {}
             data[ceph_cluster][pool_name]['size'] = pool['size']
             data[ceph_cluster][pool_name]['pg_num'] = pool['pg_num']
@@ -88,6 +96,13 @@ class CephOsdPlugin(base.Base):
             else:
                 osd_data['out'] += 1
     
+        # OSD apply and commit latency
+        for perf in json_cephosdpef_data['osd_perf_infos']:
+            osd_id = "osd.%s" % perf['id']
+            data[ceph_cluster][osd_id] = {}
+            data[ceph_cluster][osd_id]['apply_latency_ms'] = perf['perf_stats']['apply_latency_ms']
+            data[ceph_cluster][osd_id]['commit_latency_ms'] = perf['perf_stats']['commit_latency_ms']
+
         return data
 
 try:

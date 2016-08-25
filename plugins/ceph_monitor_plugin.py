@@ -45,7 +45,7 @@ class CephMonPlugin(base.Base):
     def get_stats(self):
         """Retrieves stats from ceph mons"""
 
-        ceph_cluster = "%s-%s" % (self.prefix, self.cluster)
+        ceph_cluster = "%s.%s" % (self.prefix, self.cluster)
 
         data = { ceph_cluster: { 'mon': { 'number': 0, 'quorum': 0 } } }
         output = None

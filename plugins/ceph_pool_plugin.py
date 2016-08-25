@@ -45,7 +45,7 @@ class CephPoolPlugin(base.Base):
     def get_stats(self):
         """Retrieves stats from ceph pools"""
 
-        ceph_cluster = "%s-%s" % (self.prefix, self.cluster)
+        ceph_cluster = "%s.%s" % (self.prefix, self.cluster)
 
         data = { ceph_cluster: {} }
 
@@ -71,16 +71,18 @@ class CephPoolPlugin(base.Base):
 
         # push osd pool stats results
         for pool in json_stats_data:
-            pool_key = "pool-%s" % pool['pool_name']
+            pool_name = pool['pool_name'].replace('.','-')
+            pool_key = "pool.%s" % pool_name
             data[ceph_cluster][pool_key] = {}
             pool_data = data[ceph_cluster][pool_key] 
-            for stat in ('read_bytes_sec', 'write_bytes_sec', 'op_per_sec'):
+            for stat in ('read_bytes_sec', 'write_bytes_sec', 'read_op_per_sec', 'write_op_per_sec'):
                 pool_data[stat] = pool['client_io_rate'][stat] if pool['client_io_rate'].has_key(stat) else 0
 
         # push df results
         for pool in json_df_data['pools']:
-            pool_data = data[ceph_cluster]["pool-%s" % pool['name']]
-            for stat in ('bytes_used', 'kb_used', 'objects'):
+            pool_name = pool['name'].replace('.','-')
+            pool_data = data[ceph_cluster]["pool.%s" % pool_name]
+            for stat in ('bytes_used', 'objects'):
                 pool_data[stat] = pool['stats'][stat] if pool['stats'].has_key(stat) else 0
 
         # push totals from df
