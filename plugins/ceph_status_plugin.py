@@ -41,7 +41,7 @@ class CephStatusPlugin(base.Base):
         self.prefix = 'ceph'
 
     def get_stats(self):
-        """Retrieves stats from ceph pgs"""
+        """Retrieves stats from ceph status"""
 
         ceph_cluster = "%s.%s" % (self.prefix, self.cluster)
 
@@ -82,12 +82,20 @@ class CephStatusPlugin(base.Base):
         health = json_stats_data['health']['overall_status']
         health_status = ('HEALTH_ERR', 'HEALTH_WARN', 'HEALTH_OK')
         data[ceph_cluster]['cluster']['health'] = health_status.index(health)
+
+        # Blocked I/O
+        data[ceph_cluster]['cluster']['summary'] = {}
+        data[ceph_cluster]['cluster']['summary']['blocked'] = 0
+        for items in json_stats_data['health']['summary']:
+            if 'blocked' in items['summary']:
+                val, desc = items['summary'].split(' ', 1)
+                data[ceph_cluster]['cluster']['summary']['blocked'] = val
         return data
 
 try:
     plugin = CephStatusPlugin()
 except Exception as exc:
-    collectd.error("ceph-s: failed to initialize ceph pg plugin :: %s :: %s"
+    collectd.error("ceph-s: failed to initialize ceph status plugin :: %s :: %s"
             % (exc, traceback.format_exc()))
 
 def configure_callback(conf):
